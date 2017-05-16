@@ -40,3 +40,9 @@ ansible-playbook playbook.yml -i inventory --extra-vars "kong_admin_base_url=1.2
 ```
 
 * set kong_admin_base_url and kong_base_url to your Kong instance's urls
+
+**If running native (Docker for mac) :**
+
+```
+ansible-playbook playbook.yml -i inventory --extra-vars "kong_admin_base_url=http://localhost:8001 kong_base_url=http://localhost:8000" -vv
+```
