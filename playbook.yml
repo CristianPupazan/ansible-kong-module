@@ -12,9 +12,8 @@
         kong_admin_uri: "{{kong_admin_base_url}}"
         name: "mockbin"
         upstream_url: "http://mockbin.com"
-        request_host: "mockbin.com"   
-        request_path: "/mockbin"   
-        strip_request_path: yes
+        uris: "/mockbin"
+        strip_uri: yes
         state: present
 
     - name: Verify API was added

@@ -13,9 +13,9 @@ class ModuleHelperTestCase(unittest.TestCase):
 		fields = [
             "name", 
             "upstream_url", 
-            "request_host", 
-            "request_path", 
-            "strip_request_path", 
+            "hosts",
+            "uris",
+            "strip_uri",
             "preserve_host"
         ]
 		self.helper = ModuleHelper(fields)
@@ -23,9 +23,9 @@ class ModuleHelperTestCase(unittest.TestCase):
 		self.module.params = {
 			"kong_admin_uri": mock_kong_admin_url,
             "name": "mockbin", 
-            "request_host": "mockbin.com", 
-            "request_path": "/mockbin", 
-            "strip_request_path": True, 
+            "hosts": "mockbin.com",
+            "uris": "/mockbin",
+            "strip_uri": True,
             "preserve_host": False,
             "upstream_url": "http://mockbin.com",
 			"state": "present"
@@ -53,9 +53,9 @@ class MainTestCase(unittest.TestCase):
 		fields = [
 	        'name', 
 	        'upstream_url', 
-	        'request_host',
-	        'request_path',
-	        'strip_request_path',
+	        'hosts',
+	        'uris',
+	        'strip_uri',
 	        'preserve_host'
 	    ]
 
@@ -65,7 +65,7 @@ class MainTestCase(unittest.TestCase):
 			"kong_admin_uri": "http://192.168.99.100:8001",
 			"name":"mockbin", 
 			"upstream_url":"http://mockbin.com", 
-			"request_host" : "mockbin.com"
+			"hosts" : "mockbin.com"
 		}
 
 	@mock.patch.object(ModuleHelper, 'get_response')
@@ -146,15 +146,15 @@ class KongAPITestCase(unittest.TestCase):
 		request_data = {
 			"name":"mockbin", 
 			"upstream_url":"http://mockbin.com", 
-			"request_host" : "mockbin.com",
-			"request_path" : "/mockbin" 
+			"hosts" : "mockbin.com",
+			"uris" : "/mockbin"
 		}
 		response = self.api.add_or_update(**request_data)
 
 		assert response.status_code == 201
 
 		data = parse_qs(responses.calls[1].request.body)
-		expected_keys = ['name', 'upstream_url', 'request_host', 'request_path', 'strip_request_path', 'preserve_host']
+		expected_keys = ['name', 'upstream_url', 'hosts', 'uris', 'strip_uri', 'preserve_host']
 		for key in expected_keys:
 			assert data.get(key, None) is not None, \
 				"Expect all required data to have been sent. What was actually sent: {}" . format (data)
@@ -176,15 +176,15 @@ class KongAPITestCase(unittest.TestCase):
 		request_data = {
 			"name":"mockbin", 
 			"upstream_url":"http://mockbin.com", 
-			"request_host" : "mockbin.com",
-			"request_path" : "/mockbin" 
+			"hosts" : "mockbin.com",
+			"uris" : "/mockbin"
 		}
 		response = self.api.add_or_update(**request_data)
 
 		assert response.status_code == 201
 
 		data = parse_qs(responses.calls[1].request.body)
-		expected_keys = ['name', 'upstream_url', 'request_host', 'request_path', 'strip_request_path', 'preserve_host']
+		expected_keys = ['name', 'upstream_url', 'hosts', 'uris', 'strip_uri', 'preserve_host']
 		for key in expected_keys:
 			assert data.get(key, None) is not None, \
 				"Expect all required data to have been sent. What was actually sent: {}" . format (data)
@@ -223,7 +223,7 @@ class KongAPITestCase(unittest.TestCase):
 			"id": "123",
 			"name": "Github",
 			"created_at": 1454348543000,
-			"request_host": "github.com"
+			"hosts": "github.com"
 		}
 		expected_del_url = '{}/apis/123' . format (mock_kong_admin_url)
 		responses.add(responses.GET, expected_get_url, status=200, body=json.dumps(get_body_response))
@@ -246,9 +246,9 @@ class IntegrationTests(unittest.TestCase):
 		request_data = {
 			"name":"mockbin", 
 			"upstream_url":"http://mockbin.com", 
-			"request_host" : "mockbin.com",
-			"request_path" : "/mockbin",
-			"strip_request_path": True
+			"hosts" : "mockbin.com",
+			"uris" : "/mockbin",
+			"strip_uri": True
 		}
 		response = self.api.add_or_update(**request_data)
 		import pdb;pdb.set_trace()

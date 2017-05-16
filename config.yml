@@ -10,15 +10,15 @@
         kong_admin_uri: "{{admin_base_url}}"     
         name: "{{item.name}}"
         upstream_url: "{{item.upstream_url}}"
-        request_host: "{{item.request_host}}"       
+        hosts: "{{item.hosts}}"
         state: present
-        request_path: "{{item.request_path}}"
+        uris: "{{item.uris}}"
       with_items:
         - name: "mockbin"
           upstream_url: "http://mockbin.com"
-          request_host: "mockbin.com"
-          request_path: "/mockbin"
-          strip_request_path: yes
+          hosts: "mockbin.com"
+          uris: "/mockbin"
+          strip_uri: yes
       register: response
 
     - debug: var=response

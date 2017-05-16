@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 DOCUMENTATION = '''
 ---
@@ -13,7 +13,7 @@ EXAMPLES = '''
     kong_admin_uri: http://127.0.0.1:8001/apis/
     name: "Mockbin"
     taget_url: "http://mockbin.com"
-    request_host: "mockbin.com"    
+    hosts: "mockbin.com"
     state: present
 
 - name: Delete a site
@@ -40,7 +40,7 @@ class KongAPI:
                 return True 
         return False
 
-    def add_or_update(self, name, upstream_url, request_host=None, request_path=None, strip_request_path=False, preserve_host=False):
+    def add_or_update(self, name, upstream_url, hosts=None, uris=None, strip_uri=False, preserve_host=False):
 
         method = "post"        
         url = self.__url("/apis/")
@@ -54,13 +54,13 @@ class KongAPI:
         data = {
             "name": name,
             "upstream_url": upstream_url,
-            "strip_request_path": strip_request_path,
+            "strip_uri": strip_uri,
             "preserve_host": preserve_host
         }
-        if request_host is not None:
-            data['request_host'] = request_host
-        if request_path is not None:
-            data['request_path'] = request_path
+        if hosts is not None:
+            data['hosts'] = hosts
+        if uris is not None:
+            data['uris'] = uris
 
         return getattr(requests, method)(url, data)
         
@@ -94,9 +94,9 @@ class ModuleHelper:
             kong_admin_uri = dict(required=False, type='str'),
             name = dict(required=False, type='str'),
             upstream_url = dict(required=False, type='str'),
-            request_host = dict(required=False, type='str'),    
-            request_path = dict(required=False, type='str'),  
-            strip_request_path = dict(required=False, default=False, type='bool'), 
+            hosts = dict(required=False, type='str'),
+            uris = dict(required=False, type='str'),
+            strip_uri = dict(required=False, default=False, type='bool'),
             preserve_host = dict(required=False, default=False, type='bool'),         
             state = dict(required=False, default="present", choices=['present', 'absent', 'latest', 'list', 'info'], type='str'),    
         )
@@ -135,9 +135,9 @@ def main():
     fields = [
         'name', 
         'upstream_url', 
-        'request_host',
-        'request_path',
-        'strip_request_path',
+        'hosts',
+        'uris',
+        'strip_uri',
         'preserve_host'
     ]
 
