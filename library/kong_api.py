@@ -27,6 +27,42 @@ EXAMPLES = '''
 import json, requests, os
 
 
+def convert(data):
+    if isinstance(data, basestring):
+        return str(data)
+    elif isinstance(data, collections.Mapping):
+        return dict(map(convert, data.iteritems()))
+    elif isinstance(data, collections.Iterable):
+        return type(data)(map(convert, data))
+    else:
+        return data
+
+
+def compare(key, new_value, actual_value):
+
+    def unescaped_compare(x, y):
+        return x.replace("\\", "") == y.replace("\\", "")
+
+    def escaped_list_compare(x, l):
+        escaped_list = []
+        for y in l:
+            escaped_list.append(y.replace("\\", ""))
+
+        return set([x.replace("\\", "")]) == set(escaped_list)
+
+    def compare(x, y):
+        return x == y
+
+    return {
+        'upstream_url': partial(unescaped_compare),
+        'hosts': partial(escaped_list_compare),
+        'uris': partial(escaped_list_compare),
+        'name': partial(compare),
+        'strip_uri': partial(compare),
+        'preserve_host': partial(compare)
+    }.get(key)(new_value, actual_value)
+
+
 class KongAPI:
     def __init__(self, base_url):
         self.base_url = base_url
@@ -47,20 +83,40 @@ class KongAPI:
         api_list = self.list().json().get("data", [])
         api_exists = self._api_exists(name, api_list)
 
-        if api_exists:
-            method = "patch"
-            url = "{}{}".format(url, name)
-
         data = {
             "name": name,
             "upstream_url": upstream_url,
             "strip_uri": strip_uri,
             "preserve_host": preserve_host
         }
+
         if hosts is not None:
             data['hosts'] = hosts
         if uris is not None:
             data['uris'] = uris
+
+        require_change = False
+
+        if api_exists:
+            api_info_response = self.info(name)
+            api_info_json = convert(api_info_response.json())
+
+            for key, value in data.iteritems():
+                if key in api_info_json.keys() and compare(key, value, api_info_json[key]):
+                    continue
+                else:
+                    require_change = True
+                    break
+
+            if require_change:
+                method = "patch"
+                url = "{}{}".format(url, name)
+            else:
+                not_modified = Response()
+                not_modified.status_code = 304
+                not_modified._content = json.dumps(api_info_json)
+
+                return not_modified
 
         return getattr(requests, method)(url, data)
 
@@ -161,6 +217,9 @@ def main():
 
 from ansible.module_utils.basic import *
 from ansible.module_utils.urls import *
+import collections
+from functools import partial
+from requests.models import Response
 
 if __name__ == '__main__':
     main()

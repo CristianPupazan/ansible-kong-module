@@ -3,7 +3,7 @@ from urlparse import parse_qsl, parse_qs
 from kong_api import KongAPI, ModuleHelper, main
 from ansible.module_utils.basic import AnsibleModule
 
-mock_kong_admin_url = "http://192.168.99.100:8001"
+mock_kong_admin_url = "http://localhost:8001"
 
 
 class ModuleHelperTestCase(unittest.TestCase):
@@ -153,15 +153,23 @@ class KongAPITestCase(unittest.TestCase):
                 "Expect all required data to have been sent. What was actually sent: {}".format(data)
 
     @responses.activate
-    def test_api_add_update(self):
+    def test_api_add_update_when_there_is_a_change(self):
 
         api_list = {'data': [
             {"name": "foo"},
             {"name": "bar"},
             {"name": "mockbin"}
         ]}
+
+        api_info_response = {
+            "preserve_host": False, "upstream_url": "http:\/\/mockbin.com", "uris": ["\/toBeChanged"], "strip_uri": False,
+            "name": "mockbin", "hosts": ["mockbin.com"]}
+
         expected_url = '{}/apis'.format(mock_kong_admin_url)
         responses.add(responses.GET, expected_url, status=201, body=json.dumps(api_list))
+
+        expected_url = '{}/apis/mockbin'.format(mock_kong_admin_url)
+        responses.add(responses.GET, expected_url, status=200, body=json.dumps(api_info_response))
 
         expected_url = '{}/apis/mockbin'.format(mock_kong_admin_url)
         responses.add(responses.PATCH, expected_url, status=201)
@@ -176,11 +184,58 @@ class KongAPITestCase(unittest.TestCase):
 
         assert response.status_code == 201
 
-        data = parse_qs(responses.calls[1].request.body)
+        data = parse_qs(responses.calls[2].request.body)
         expected_keys = ['name', 'upstream_url', 'hosts', 'uris', 'strip_uri', 'preserve_host']
         for key in expected_keys:
             assert data.get(key, None) is not None, \
                 "Expect all required data to have been sent. What was actually sent: {}".format(data)
+
+    @responses.activate
+    def test_api_add_update_when_there_is_no_change(self):
+
+        api_list = {'data': [
+            {"name": "foo"},
+            {"name": "bar"},
+            {"name": "mockbin"}
+        ]}
+
+        api_info_response = {
+            "preserve_host": False, "upstream_url": "http:\/\/mockbin.com", "uris": ["\/mockbin"], "strip_uri": False,
+            "name": "mockbin", "hosts": ["mockbin.com"]}
+
+        responses.add(responses.GET, '{}/apis'.format(mock_kong_admin_url), status=201, body=json.dumps(api_list))
+
+        responses.add(responses.GET, '{}/apis/mockbin'.format(mock_kong_admin_url), status=200, body=json.dumps(api_info_response))
+
+        request_data = {
+            "name": "mockbin",
+            "upstream_url": "http://mockbin.com",
+            "hosts": "mockbin.com",
+            "uris": "/mockbin"
+        }
+        response = self.api.add_or_update(**request_data)
+
+        assert response.status_code == 304
+
+    @responses.activate
+    def test_api_add_update_when_there_api_does_not_exist(self):
+
+        api_list = {'data': [
+            {"name": "foo"}
+        ]}
+
+        responses.add(responses.GET, '{}/apis'.format(mock_kong_admin_url), status=201, body=json.dumps(api_list))
+        responses.add(responses.POST, '{}/apis/'.format(mock_kong_admin_url), status=201)
+
+        request_data = {
+            "name": "mockbin",
+            "upstream_url": "http://mockbin.com",
+            "hosts": "mockbin.com",
+            "uris": "/mockbin"
+        }
+        response = self.api.add_or_update(**request_data)
+
+        assert response.status_code == 201
 
     @responses.activate
     def test_list_apis(self):
@@ -230,7 +285,7 @@ class KongAPITestCase(unittest.TestCase):
 
 class IntegrationTests(unittest.TestCase):
     def setUp(self):
-        self.api = KongAPI("http://192.168.99.100:8001")
+        self.api = KongAPI("http://localhost:8001")
 
     @unittest.skip("integration")
     def test_add_api(self):
